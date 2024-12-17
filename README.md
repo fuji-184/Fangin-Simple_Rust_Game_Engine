@@ -1,3 +1,3 @@
-This project is still in development.
+This project is still in development
 
-- Window [x]
+- [x] Window
