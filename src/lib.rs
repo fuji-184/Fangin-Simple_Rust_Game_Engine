@@ -1,3 +1,7 @@
+mod renderer_backend;
+
+use renderer_backend::pipeline_builder::PipelineBuilder;
+
 use anyhow::{Context, Result};
 use tracing::{error, info};
 use wgpu::util::DeviceExt;
@@ -24,7 +28,8 @@ pub struct GraphicState<'lifetime_1> {
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
-    size: PhysicalSize<u32>
+    size: PhysicalSize<u32>,
+    render_pipeline: wgpu::RenderPipeline
 }
 
 impl<'lifetime_1> GraphicState<'lifetime_1> {
@@ -79,12 +84,18 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         };
         surface.configure(&device, &config);
 
+        let mut pipeline_builder = PipelineBuilder::new();
+        pipeline_builder.set_shader_module("shader.wgsl", "vs_main", "fs_main");
+        pipeline_builder.set_pixel_format(config.format);
+        let render_pipeline = pipeline_builder.build_pipeline(&device);
+
         Self {
             surface,
             device,
             queue,
             config,
-            size
+            size,
+            render_pipeline
         }
     })
     }
@@ -130,7 +141,12 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
             timestamp_writes: None
         };
 
-        command_encoder.begin_render_pass(&render_pass_descriptor);
+        {
+            let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(0..3, 0..1);
+        }
+
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         drawable.present();
