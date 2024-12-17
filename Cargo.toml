@@ -1,0 +1,11 @@
+[package]
+name = "fuji-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tracing = "*"
+anyhow = "*"
+wgpu = "*"
+winit = "*"
+tokio = { version="*", features=["full"] }
