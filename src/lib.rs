@@ -33,7 +33,8 @@ pub struct GraphicState<'lifetime_1> {
     config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    triangle_mesh: wgpu::Buffer
+    triangle_mesh: wgpu::Buffer,
+    quad_mesh: mesh_builder::Mesh
 }
 
 impl<'lifetime_1> GraphicState<'lifetime_1> {
@@ -89,6 +90,7 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         surface.configure(&device, &config);
 
         let triangle_mesh = mesh_builder::make_triangle(&device);
+        let quad_mesh = mesh_builder::make_quad(&device);
 
         let mut pipeline_builder = PipelineBuilder::new();
         pipeline_builder.add_buffer_layout(mesh_builder::Vertex::get_layout());
@@ -103,7 +105,8 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
             config,
             size,
             render_pipeline,
-            triangle_mesh
+            triangle_mesh,
+            quad_mesh
         }
     })
     }
@@ -152,6 +155,11 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         {
             let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
             render_pass.set_pipeline(&self.render_pipeline);
+
+            render_pass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.quad_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..6, 0, 0..1);
+
             render_pass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
             render_pass.draw(0..3, 0..1);
         }
