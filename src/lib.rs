@@ -1,9 +1,6 @@
 mod renderer_backend;
 
-use renderer_backend::{
-    pipeline_builder::PipelineBuilder,
-    mesh_builder
-};
+use renderer_backend::*;
 
 use anyhow::{Context, Result};
 use tracing::{error, info};
@@ -34,13 +31,16 @@ pub struct GraphicState<'lifetime_1> {
     size: PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     triangle_mesh: wgpu::Buffer,
-    quad_mesh: mesh_builder::Mesh
+    quad_mesh: mesh_builder::Mesh,
+    triangle_material: materials::Material,
+    quad_material: materials::Material
 }
 
 impl<'lifetime_1> GraphicState<'lifetime_1> {
     pub fn new(window: Arc<Window>) -> GraphicState<'lifetime_1> {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async {
+
         let size = Arc::clone(&window).inner_size();
 
         let instance_descriptor = wgpu::InstanceDescriptor {
@@ -92,11 +92,25 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         let triangle_mesh = mesh_builder::make_triangle(&device);
         let quad_mesh = mesh_builder::make_quad(&device);
 
-        let mut pipeline_builder = PipelineBuilder::new();
-        pipeline_builder.add_buffer_layout(mesh_builder::Vertex::get_layout());
-        pipeline_builder.set_shader_module("shader.wgsl", "vs_main", "fs_main");
-        pipeline_builder.set_pixel_format(config.format);
-        let render_pipeline = pipeline_builder.build_pipeline(&device);
+        let material_bind_group_layout: wgpu::BindGroupLayout;
+        {
+            let mut builder = bind_group_layout::Builder::new(&device);
+            builder.add_material();
+            material_bind_group_layout = builder.build("Material bind group layout");
+        }
+
+        let render_pipeline: wgpu::RenderPipeline;
+        {
+            let mut builder = pipeline::Builder::new(&device);
+            builder.add_vertex_buffer_layout(mesh_builder::Vertex::get_layout());
+            builder.set_shader_module("shader.wgsl", "vs_main", "fs_main");
+            builder.set_pixel_format(config.format);
+            builder.add_bind_group_layout(&material_bind_group_layout);
+            render_pipeline = builder.build_pipeline("Render pipelne");
+        }
+
+        let quad_material = materials::Material::new("gambar.png", &device, &queue, &material_bind_group_layout);
+        let triangle_material = materials::Material::new("gambar.png", &device, &queue, &material_bind_group_layout);
 
         Self {
             surface,
@@ -106,7 +120,9 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
             size,
             render_pipeline,
             triangle_mesh,
-            quad_mesh
+            quad_mesh,
+            triangle_material,
+            quad_material
         }
     })
     }
@@ -158,8 +174,10 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
 
             render_pass.set_vertex_buffer(0, self.quad_mesh.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.quad_mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_bind_group(0, &self.quad_material.bind_group, &[]);
             render_pass.draw_indexed(0..6, 0, 0..1);
 
+            render_pass.set_bind_group(0, &self.triangle_material.bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
             render_pass.draw(0..3, 0..1);
         }

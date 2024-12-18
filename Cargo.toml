@@ -10,3 +10,4 @@ wgpu = "*"
 winit = "*"
 tokio = { version="*", features=["full"] }
 glm = "*"
+image = "*"
