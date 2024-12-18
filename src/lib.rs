@@ -1,6 +1,9 @@
 mod renderer_backend;
 
-use renderer_backend::pipeline_builder::PipelineBuilder;
+use renderer_backend::{
+    pipeline_builder::PipelineBuilder,
+    mesh_builder
+};
 
 use anyhow::{Context, Result};
 use tracing::{error, info};
@@ -29,7 +32,8 @@ pub struct GraphicState<'lifetime_1> {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
-    render_pipeline: wgpu::RenderPipeline
+    render_pipeline: wgpu::RenderPipeline,
+    triangle_mesh: wgpu::Buffer
 }
 
 impl<'lifetime_1> GraphicState<'lifetime_1> {
@@ -84,7 +88,10 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         };
         surface.configure(&device, &config);
 
+        let triangle_mesh = mesh_builder::make_triangle(&device);
+
         let mut pipeline_builder = PipelineBuilder::new();
+        pipeline_builder.add_buffer_layout(mesh_builder::Vertex::get_layout());
         pipeline_builder.set_shader_module("shader.wgsl", "vs_main", "fs_main");
         pipeline_builder.set_pixel_format(config.format);
         let render_pipeline = pipeline_builder.build_pipeline(&device);
@@ -95,7 +102,8 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
             queue,
             config,
             size,
-            render_pipeline
+            render_pipeline,
+            triangle_mesh
         }
     })
     }
@@ -144,6 +152,7 @@ impl<'lifetime_1> GraphicState<'lifetime_1> {
         {
             let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.triangle_mesh.slice(..));
             render_pass.draw(0..3, 0..1);
         }
 

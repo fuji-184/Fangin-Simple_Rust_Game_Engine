@@ -9,3 +9,4 @@ anyhow = "*"
 wgpu = "*"
 winit = "*"
 tokio = { version="*", features=["full"] }
+glm = "*"
