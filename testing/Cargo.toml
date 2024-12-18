@@ -6,5 +6,4 @@ default-run = "testing"
 
 [dependencies]
 fuji-engine = { path = "../" }
-tracing = "*"
 tracing-subscriber = "*"
