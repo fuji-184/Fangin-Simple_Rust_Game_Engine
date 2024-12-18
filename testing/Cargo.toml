@@ -8,5 +8,3 @@ default-run = "testing"
 fuji-engine = { path = "../" }
 tracing = "*"
 tracing-subscriber = "*"
-wgpu = "*"
-winit = "*"
